@@ -1,16 +1,14 @@
 #include "func.h"
+#include "key.h"
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 int main(){
 
-    uint64_t plain = 0xabcdef1234567890;
-    uint64_t key = 0xabcdabcdabcdabcd;
-    uint64_t cipher=encrypt(plain, key);
-
-    printf("Plain text: %llx\n", plain);
-    printf("Cipher text: %llx\n", cipher);
-    printf("\ndecrypt: %llx", encrypt(cipher, key));
+    printf("%llx\n", encrypt(0xabcdef1234567890, 0xabcdabcdabcdabcd));
+    printf("%llx\n", encrypt(0x04d03e58188b0258, 0xabcdabcdabcdabcd));
 
     return 0;
 }

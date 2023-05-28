@@ -30,12 +30,12 @@ const uint8_t mapPC2[48]=
         46, 42, 50, 36, 29, 32 
     };
 
-const uint8_t leftShiftConst[16]={1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1};
+const uint8_t leftShiftConst[16]={1, 2, 4, 6, 8, 10, 12, 14, 15, 17, 19, 21, 23, 25, 27, 28};
 
 uint32_t permuteChoice1(int mode, uint64_t key, int shiftNumber){
     uint32_t out = 0;
     for(int i=0; i<28; i++){
-        uint32_t bit = (key >> mapPC1[mode][(28+i-shiftNumber)%28]) & 1;
+        uint32_t bit = (key >> (mapPC1[mode][(28+i-shiftNumber)%28]-1)) & 1;
         out = out | (bit << i);
     }
     return out;
@@ -44,20 +44,21 @@ uint32_t permuteChoice1(int mode, uint64_t key, int shiftNumber){
 uint64_t permuteChoice2(uint64_t cd){
     uint64_t out=0;
     for(int i=0; i<48; i++){
-        uint64_t bit = (cd >> mapPC2[i]) &1;
-        out = out | (bit<i);
+        uint64_t bit = (cd >> (mapPC2[i]-1)) &1;
+        out = out | (bit<<i);
     }
     return out;
 }
 
 uint64_t keySchedule(int n, uint64_t key){
-    int shiftNumber = 0;
-    for(int i=0; i<n; i++){
-        shiftNumber += leftShiftConst[i];
-    }
-    uint64_t c =permuteChoice1(0, key, shiftNumber);
-    uint32_t d =permuteChoice1(1, key, shiftNumber);
+    uint64_t c =permuteChoice1(0, key, leftShiftConst[n-1]);
+    uint64_t d =permuteChoice1(1, key, leftShiftConst[n-1]);
     uint64_t out = (c<<28) | d;
     out = permuteChoice2(out);
     return out;
+}
+
+uint64_t generateKey(uint8_t first, uint8_t second, uint8_t third, uint8_t fourth, uint8_t fifth, uint8_t sixth, uint8_t seventh, uint8_t eighth) {
+    uint64_t key = (0x61+(uint64_t)first)<<56 | (0x61 + (uint64_t)second)<<48 | (0x61 + (uint64_t)third)<<40 | (0x61 + (uint64_t)fourth)<<32 | (0x61 + (uint64_t)fifth)<<24 | (0x61 + (uint64_t)sixth)<<16 | (0x61 + (uint64_t)seventh)<<8 | (0x61 + (uint64_t)eighth);
+    return key;
 }
