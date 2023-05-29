@@ -5,7 +5,7 @@
 
 const uint8_t permutePosition[64]=
     {
-       58, 50, 42, 34, 26, 18, 10, 2,
+        58, 50, 42, 34, 26, 18, 10, 2,
         60, 52, 44, 36, 28, 20, 12, 4,
         62, 54, 46, 38, 30, 22, 14, 6,
         64, 56, 48, 40, 32, 24, 16, 8,
@@ -27,7 +27,7 @@ const uint8_t inversePermutePosition[64]=
         33, 1, 41, 9, 49, 17, 57, 25
     };
 
-const uint8_t mapE[48]=
+const uint8_t expansionPermutePosition[48]=
     {
         32, 1, 2, 3, 4, 5,
         4, 5, 6, 7, 8, 9,
@@ -39,7 +39,7 @@ const uint8_t mapE[48]=
         28, 29, 30, 31, 32, 1
     };
 
-const uint8_t mapP[32]=
+const uint8_t pBox[32]=
     {
         16, 7, 20, 21,
         29, 12, 28, 17,
@@ -51,7 +51,7 @@ const uint8_t mapP[32]=
         22, 11, 4, 25
     };
 
-const uint8_t mapS[8][4][16]=
+const uint8_t sBox[8][4][16]=
 {
     {
         {14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7},
@@ -106,8 +106,8 @@ const uint8_t mapS[8][4][16]=
 uint64_t initialPermutation(uint64_t input){
     uint64_t output=0;    
     for(int i=0; i<64; i++){
-        uint64_t bit=(input >> (permutePosition[i]-1)) & 1;
-        output = output | (bit << i);
+        uint64_t bit=(input << (permutePosition[i]-1)) & 0x8000000000000000;
+        output = output | (bit >> i);
     }
     return output;
 }
@@ -115,57 +115,61 @@ uint64_t initialPermutation(uint64_t input){
 uint64_t inversePermutation(uint64_t input){
     uint64_t output=0;
     for(int i=0; i<64; i++){
-        uint64_t bit=(input >> (inversePermutePosition[i]-1)) & 1;
-        output= output | (bit << i);
+        uint64_t bit=(input << (inversePermutePosition[i]-1)) & 0x8000000000000000;
+        output= output | (bit >> i);
     }
     return output;
 }
 
-uint32_t funcP(uint32_t in){
+uint32_t pBoxPermutation(uint32_t in){
     uint32_t out=0;
     for(int i=0; i<32; i++){
-        uint32_t bit=(in >> (mapP[i]-1)) & 1;
-        out = out | (bit<<i);
+        uint32_t bit=(in << (pBox[i]-1)) & 0x80000000;
+        out = out | (bit>>i);
     }
     return out;
 }
 
-uint32_t funcS(uint64_t in){
+uint32_t sBoxSubstitution(uint64_t in){
     uint32_t out = 0;
     uint8_t s;
     uint8_t partition;
     for(int i=0; i<8; i++){
-        s= (in >> (6*(7-i)))& 0xFF;
-        partition = mapS[i][(((0x20&s)>>4 )| (s&1))][(s>>1)&0xF];
+        s= (in >> (6*(7-i)))& 0x3F;
+        partition = sBox[i][(((0x20&s)>>4 )| (s&1))][(s>>1)&0xF];
+        //printf("%d, ",partition);
         out = out | partition<<(4*(7-i));
     }
     return out;
 }
 
-uint64_t funcE(uint32_t R){
+uint64_t expansionPermutation(uint32_t R){
     uint64_t out=0;
     uint64_t bit = 0;
     for(int i=0; i<48; i++){
-        bit = (R >> (mapE[i]-1)) & 1;
-        out = out | bit<<i;
+        bit = (R >> (32-expansionPermutePosition[i])) & 0x1;
+        out = out | bit<<(47-i);
     }
     return out;
 }
 
 uint32_t functionF(uint32_t R, uint64_t key){
-    uint64_t out=funcE(R);
+    uint64_t out=expansionPermutation(R);
+    
     out = out ^ key;
-    out = funcS(out);
-    out = funcP(out);
-    return out;
+    out = sBoxSubstitution(out);
+    out = pBoxPermutation(out);
+    return (uint32_t)out;
 }
 
 uint64_t encrypt(uint64_t plain_text, uint64_t key){
-    uint32_t left = initialPermutation(plain_text)>>32;
-    uint32_t right = initialPermutation(plain_text);
+    uint64_t permutedText = initialPermutation(plain_text);
+    uint32_t left = permutedText>>32;
+    uint32_t right = permutedText&0xFFFFFFFF;
+    uint64_t permutedKey = permuteChoice1(key);
     for(int i=1; i<17; i++){
         uint32_t temp = right;
-        right = functionF(right, keySchedule(i, key))^left;
+        right = functionF(right, keySchedule(i, permutedKey))^left;
         left = temp;
     }
     uint64_t out= right;
@@ -173,6 +177,22 @@ uint64_t encrypt(uint64_t plain_text, uint64_t key){
     out = inversePermutation(out);
     return out;
 }
+
+uint64_t decrypt(uint64_t cipher_text, uint64_t key){
+    uint32_t left = initialPermutation(cipher_text)>>32;
+    uint32_t right = initialPermutation(cipher_text);
+    uint64_t permutedKey = permuteChoice1(key);
+    for(int i=16; i>0; i--){
+        uint32_t temp = right;
+        right = functionF(right, keySchedule(i, permutedKey))^left;
+        left = temp;
+    }
+    uint64_t out= right;
+    out= (out<<32) | left;
+    out = inversePermutation(out);
+    return out;
+}
+
 
 uint64_t stringToASCII(char* string){
     uint64_t out = 0;

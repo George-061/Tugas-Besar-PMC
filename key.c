@@ -1,24 +1,8 @@
 #include "func.h"
 #include <stdio.h>
 #include <stdint.h>
-
-const uint8_t mapPC1[2][28]=
-    {
-        {
-            57, 49, 41, 33, 25, 17, 9,
-            1, 58, 50, 42, 34, 26, 18,
-            10, 2, 59, 51, 43, 35, 27,
-            19, 11, 3, 60, 52, 44, 36
-        },
-        {
-            63, 55, 47, 39, 31, 23, 15,
-            7, 62, 54, 46, 38, 30, 22,
-            14, 6, 61, 53, 45, 37, 29,
-            21, 13, 5, 28, 20, 12, 4
-        }
-    };
-
-const uint8_t mapPC2[48]=
+    
+const uint8_t compressionPermutePosition[48]=
     {
         14, 17, 11, 24, 1, 5,
         3, 28, 15, 6, 21, 10,
@@ -30,31 +14,51 @@ const uint8_t mapPC2[48]=
         46, 42, 50, 36, 29, 32 
     };
 
+const uint8_t boxPC1[56]=
+    {
+            57, 49, 41, 33, 25, 17, 9,
+            1, 58, 50, 42, 34, 26, 18,
+            10, 2, 59, 51, 43, 35, 27,
+            19, 11, 3, 60, 52, 44, 36,
+            63, 55, 47, 39, 31, 23, 15,
+            7, 62, 54, 46, 38, 30, 22,
+            14, 6, 61, 53, 45, 37, 29,
+            21, 13, 5, 28, 20, 12, 4
+    };
+
 const uint8_t leftShiftConst[16]={1, 2, 4, 6, 8, 10, 12, 14, 15, 17, 19, 21, 23, 25, 27, 28};
 
-uint32_t permuteChoice1(int mode, uint64_t key, int shiftNumber){
-    uint32_t out = 0;
-    for(int i=0; i<28; i++){
-        uint32_t bit = (key >> (mapPC1[mode][(28+i-shiftNumber)%28]-1)) & 1;
-        out = out | (bit << i);
+uint64_t keyBitRemoval(uint64_t initialKey){
+    uint64_t out = (initialKey & 0x7F00000000000000)>>7 | (initialKey & 0x7F000000000000)>>6 | (initialKey & 0x7F0000000000)>>5| (initialKey & 0x7F00000000)>>4 |(initialKey & 0x7F000000)>>3 |(initialKey & 0x7F0000)>>2 |(initialKey & 0x7F00)>>1 |(initialKey & 0x7F);  
+    return out;
+}
+
+uint64_t permuteChoice1(uint64_t initialKey){
+    uint64_t out = 0;
+    for(int i=0; i<56; i++){
+        uint64_t bit = (initialKey >> (64 - boxPC1[i])) & 0x1;
+        out = out | (bit << (55-i));
     }
     return out;
 }
 
-uint64_t permuteChoice2(uint64_t cd){
+uint64_t compressionPermutation(uint64_t key){
     uint64_t out=0;
     for(int i=0; i<48; i++){
-        uint64_t bit = (cd >> (mapPC2[i]-1)) &1;
-        out = out | (bit<<i);
+        uint64_t bit = (key >> (56-compressionPermutePosition[i])) &0x1;
+        out = out | (bit<<(47-i));
     }
     return out;
 }
 
-uint64_t keySchedule(int n, uint64_t key){
-    uint64_t c =permuteChoice1(0, key, leftShiftConst[n-1]);
-    uint64_t d =permuteChoice1(1, key, leftShiftConst[n-1]);
-    uint64_t out = (c<<28) | d;
-    out = permuteChoice2(out);
+uint64_t keySchedule(int n, uint64_t permutedKey){
+    uint64_t out;
+    uint64_t c= permutedKey>>28;
+    uint64_t d= permutedKey&0xfffffff;
+    c= (c<<leftShiftConst[n-1] | c>>(28-leftShiftConst[n-1]))&0xfffffff;
+    d= (d<<leftShiftConst[n-1] | d>>(28-leftShiftConst[n-1]))&0xfffffff;
+    out = (c<<28) | d;
+    out = compressionPermutation(out);
     return out;
 }
 
