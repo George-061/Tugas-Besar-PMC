@@ -8,14 +8,15 @@
 
 int main(){
     
-    //char plain_txt[9];
-    //char cipher_txt[9];
+    char plain_txt[9];
     uint64_t plain, cipher, key;
-    printf("Masukkan Plain (Hex): ");
-    scanf("%llx", &plain);
-    printf("Masukkan Cipher (Hex): ");
+
+    printf("Masukkan Plain text: ");
+    scanf("%s", plain_txt);
+    printf("Masukkan Cipher (HEX): ");
     scanf("%llx", &cipher);
-    
+    plain = stringToASCII(plain_txt);
+
     clock_t start_time, end_time;
     start_time = clock();
     bool not_found = true;
@@ -44,8 +45,10 @@ int main(){
     if(not_found){
         printf("KEY tidak ditemukan");
     }else{
+        char key_txt[9];
+        asciiToString(key, key_txt);
         double elapsed_time = (double) (end_time-start_time)/CLOCKS_PER_SEC;
-        printf("KEY: %llx\nElapsed time: %lf", key, elapsed_time);
+        printf("KEY: %s\nElapsed time: %lfs\n", key_txt, elapsed_time);
     }
 
     return 0;

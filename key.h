@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 
-uint64_t keyBitRemoval(uint64_t initialKey);
 uint64_t permuteChoice1(uint64_t initialKey);
 uint64_t compressionPermutation(uint64_t key);
 uint64_t keySchedule(int n, uint64_t key);

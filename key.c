@@ -28,11 +28,6 @@ const uint8_t boxPC1[56]=
 
 const uint8_t leftShiftConst[16]={1, 2, 4, 6, 8, 10, 12, 14, 15, 17, 19, 21, 23, 25, 27, 28};
 
-uint64_t keyBitRemoval(uint64_t initialKey){
-    uint64_t out = (initialKey & 0x7F00000000000000)>>7 | (initialKey & 0x7F000000000000)>>6 | (initialKey & 0x7F0000000000)>>5| (initialKey & 0x7F00000000)>>4 |(initialKey & 0x7F000000)>>3 |(initialKey & 0x7F0000)>>2 |(initialKey & 0x7F00)>>1 |(initialKey & 0x7F);  
-    return out;
-}
-
 uint64_t permuteChoice1(uint64_t initialKey){
     uint64_t out = 0;
     for(int i=0; i<56; i++){
